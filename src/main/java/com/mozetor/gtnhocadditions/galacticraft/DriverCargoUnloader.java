@@ -60,6 +60,21 @@ public class DriverCargoUnloader extends DriverSidedTileEntity {
             tileEntity.disabled = !tileEntity.disabled;
             return new Object[] { !tileEntity.disabled };
         }
+
+        @Callback(
+            doc = "function(): boolean, string -- Get last operation result as success and exact status (see docs for possible results and gotchas)")
+        public Object[] getInvStatus(final Context context, final Arguments args) {
+            if (tileEntity.noTarget) {
+                return new Object[] { false, "TARGET_NOT_FOUND" };
+            } else if (tileEntity.targetNoInventory) {
+                // Never actually happens due to a bug
+                return new Object[] { false, "TARGET_LACKS_INVENTORY" };
+            } else if (tileEntity.targetEmpty) {
+                return new Object[] { false, "TARGET_EMPTY" };
+            }
+
+            return new Object[] { true, "SUCCESS" };
+        }
     }
 
     @Override
