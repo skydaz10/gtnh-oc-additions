@@ -1,5 +1,7 @@
 package com.mozetor.gtnhocadditions.galacticraft;
 
+import java.lang.reflect.Field;
+
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -11,22 +13,22 @@ import li.cil.oc.api.machine.Context;
 import li.cil.oc.api.network.ManagedEnvironment;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.DriverSidedTileEntity;
-import micdoodle8.mods.galacticraft.core.tile.TileEntityCargoLoader;
+import micdoodle8.mods.galacticraft.core.tile.TileEntityFuelLoader;
 
-public class DriverCargoLoader extends DriverSidedTileEntity {
+public class DriverFuelLoader extends DriverSidedTileEntity {
 
-    private static final String Name = "cargo_loader";
+    private static final String Name = "fuel_loader";
 
     @Override
     public Class<?> getTileEntityClass() {
-        return TileEntityCargoLoader.class;
+        return TileEntityFuelLoader.class;
     }
 
     public static class InternalEnvironment extends li.cil.oc.api.prefab.ManagedEnvironment implements NamedBlock {
 
-        private final TileEntityCargoLoader tileEntity;
+        private final TileEntityFuelLoader tileEntity;
 
-        public InternalEnvironment(TileEntityCargoLoader tile) {
+        public InternalEnvironment(TileEntityFuelLoader tile) {
             tileEntity = tile;
             setNode(
                 Network.newNode(this, Visibility.Network)
@@ -44,19 +46,20 @@ public class DriverCargoLoader extends DriverSidedTileEntity {
             return 0;
         }
 
-        @Callback(
-            doc = "function(): boolean, string --- Get last operation result as success and exact status (OUT_OF_ITEMS, TARGET_NOT_FOUND, TARGET_FULL, TARGET_LACKS_INVENTORY, SUCCESS)")
-        public Object[] getStatus(final Context context, final Arguments args) {
-            if (tileEntity.outOfItems) {
-                return new Object[] { false, "OUT_OF_ITEMS" };
-            } else if (tileEntity.noTarget) {
-                return new Object[] { false, "TARGET_NOT_FOUND" };
-            } else if (tileEntity.targetFull) {
-                return new Object[] { false, "TARGET_FULL" };
-            } else if (tileEntity.targetNoInventory) {
-                return new Object[] { false, "TARGET_LACKS_INVENTORY" };
+        @Callback(doc = "function(): bool --- Returns whether fuel is being loaded right now.")
+        public Object[] isLoading(final Context context, final Arguments args) throws Exception {
+            try {
+                Field f = TileEntityFuelLoader.class.getDeclaredField("loadedFuelLastTick");
+                f.setAccessible(true);
+                return new Object[] { (boolean) f.get(tileEntity) };
+            } catch (Exception e) {
+                throw new Exception("failed to get fueler status");
             }
-            return new Object[] { true, "SUCCESS" };
+        }
+
+        @Callback(doc = "function(): table --- Get information about the loader's fuel tank.")
+        public Object[] getFuelTank(final Context context, final Arguments args) {
+            return new Object[] { tileEntity.fuelTank.getInfo() };
         }
 
         @Callback(doc = "function(): bool --- Gets the current state of the machine.")
@@ -69,17 +72,11 @@ public class DriverCargoLoader extends DriverSidedTileEntity {
             tileEntity.disabled = !args.checkBoolean(0);
             return new Object[] { !tileEntity.disabled };
         }
-
-        @Callback(doc = "function(): bool --- Toggles the loader on/off and returns whether its enabled.")
-        public Object[] toggleEnabled(final Context context, final Arguments args) {
-            tileEntity.disabled = !tileEntity.disabled;
-            return new Object[] { !tileEntity.disabled };
-        }
     }
 
     @Override
     public ManagedEnvironment createEnvironment(World world, int x, int y, int z, ForgeDirection side) {
-        TileEntityCargoLoader t = (TileEntityCargoLoader) world.getTileEntity(x, y, z);
+        TileEntityFuelLoader t = (TileEntityFuelLoader) world.getTileEntity(x, y, z);
         return new InternalEnvironment(t);
     }
 }
